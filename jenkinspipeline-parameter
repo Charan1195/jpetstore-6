@@ -1,0 +1,46 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to build')
+        string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Docker image tag')
+    }
+
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout SCM') {
+            steps {
+                checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/anji103/jpetstore-6.git']])
+            }
+        }
+
+        stage('Maven Compile') {
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+
+        stage('Package') {
+            steps {
+                sh 'mvn package'
+            }
+        }
+
+        stage('Build and Push to Docker Hub') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                        sh "docker build -t jpestore ."
+                        sh "docker tag jpestore charan1306/jpestore:latest"
+                        sh "docker push charan1306/jpestore:latest"
+                    }
+                }
+            }
+        }
+    }
+}
